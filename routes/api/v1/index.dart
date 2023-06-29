@@ -35,7 +35,8 @@ Future<Response> _onPostRequest(
   dynamic json,
 ) async {
   try {
-    final pipeline = pick(json, 'pipeline').asListOrEmpty((item) => item.asMapOrEmpty<String, Object>());
+    final pipeline = pick(json, 'pipeline')
+        .asListOrEmpty((item) => item.asMapOrEmpty<String, Object>());
 
     if (pipeline.isEmpty) return Response.json(body: []);
 
@@ -61,7 +62,18 @@ Future<Response> _onPutRequest(
 
     if (document.isEmpty) return Response(statusCode: HttpStatus.badRequest);
 
-    final writeResult = await collection.insertOne(document);
+    final parseDocument = document.entries.fold(
+      <String, Object>{},
+      (previousValue, field) => {
+        ...previousValue,
+        field.key: field.value is String &&
+                ObjectId.tryParse(field.value as String) != null
+            ? ObjectId.tryParse(field.value as String) as ObjectId
+            : field.value
+      },
+    );
+
+    final writeResult = await collection.insertOne(parseDocument);
 
     return Response.json(body: writeResult.document);
   } catch (e) {
@@ -86,7 +98,8 @@ Future<Response> _onPatchRequest(
 
     final id = ObjectId.tryParse(idHexString);
 
-    if (id == null || modifyObject.isEmpty) return Response(statusCode: HttpStatus.badRequest);
+    if (id == null || modifyObject.isEmpty)
+      return Response(statusCode: HttpStatus.badRequest);
 
     final modifier = modify;
 
