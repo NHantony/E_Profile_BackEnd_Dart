@@ -40,6 +40,21 @@ Future<Response> _onPostRequest(
 
     if (pipeline.isEmpty) return Response.json(body: []);
 
+    if ((pipeline[0]['\$match'] as Map).containsKey(":company")) {
+      final matchStage = {
+        r'$match': {
+          ...(pipeline[0]['\$match'] as Map),
+          'company': ObjectId.fromHexString(
+              (pipeline[0]['\$match'] as Map)[':company'] as String)
+        }
+      };
+
+      (matchStage['\$match'] as Map).remove(':company');
+
+      pipeline[0] = matchStage;
+    }
+    print(pipeline);
+
     final aggregate = await collection.aggregateToStream(pipeline).toList();
 
     return Response.json(body: aggregate);
